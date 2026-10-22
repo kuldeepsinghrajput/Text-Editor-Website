@@ -1,0 +1,260 @@
+﻿@model test_project.Models.SavedText
+
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<style>
+    .editable-display {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        margin: 0;
+        padding: 8px;
+        border: 1px solid transparent;
+        border-radius: 5px;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        overflow-y: auto;
+        color: inherit;
+        background: transparent;
+    }
+
+        .editable-display:hover {
+            border-color: #ced4da;
+        }
+
+    .editable-input {
+        display: none;
+        box-sizing: border-box;
+        width: 100%;
+        margin: 0;
+        padding: 8px;
+        border: 1px solid transparent;
+        border-radius: 5px;
+        color: inherit;
+        background: transparent;
+        box-shadow: none;
+        outline: none;
+    }
+
+        .editable-input:focus {
+            border-color: #ced4da;
+            background: transparent;
+            box-shadow: none;
+        }
+
+    /* Title keeps the same dimensions and heading typography */
+    #titleDisplay,
+    #titleInput {
+        height: 48px;
+        min-height: 48px;
+        max-height: 48px;
+        font-family: inherit;
+        font-size: inherit;
+        font-weight: inherit;
+        line-height: normal;
+    }
+
+    #titleDisplay {
+        cursor: text;
+    }
+
+    /* Body remains the same size in viewing and editing modes */
+    #contentDisplay,
+    #contentInput {
+        height: 300px;
+        min-height: 300px;
+        max-height: 300px;
+        font-family: inherit;
+        font-size: 1rem;
+        font-weight: 400;
+        line-height: 1.5;
+    }
+
+    #contentDisplay {
+        cursor: text;
+    }
+
+    #contentInput {
+        display: none;
+        resize: none;
+        overflow-y: auto;
+    }
+
+    .save-status {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+</style>
+
+<h2>
+    <span id="titleDisplay"
+          class="editable-display"
+          title="Click to edit the title">@Model.Title</span>
+
+    <input id="titleInput"
+           class="editable-input"
+           value="@Model.Title"
+           maxlength="200"
+           aria-label="Edit title" />
+</h2>
+
+<p class="text-muted">
+    Created: @Model.CreatedAt.ToString("dd MMM yyyy HH:mm") UTC
+</p>
+
+<div class="card">
+    <div class="card-body">
+        <div id="contentDisplay"
+             class="editable-display"
+             title="Click to edit the content">
+            @Model.Content
+        </div>
+
+        <textarea id="contentInput"
+                  class="editable-input"
+                  aria-label="Edit content"></textarea>
+    </div>
+</div>
+
+<p id="saveStatus" class="save-status mt-2" aria-live="polite">
+    Click the title or content to edit.
+</p>
+
+<a asp-action="Index" class="btn btn-secondary mt-3">
+    Back to My Texts
+</a>
+
+<form id="antiForgeryForm" style="display:none">
+    @Html.AntiForgeryToken()
+</form>
+
+@section Scripts {
+    <script>
+        const recordId = @Model.Id;
+        const saveUrl = '@Url.Action("UpdateField", "SavedTexts")';
+
+        const token = document.querySelector(
+            '#antiForgeryForm input[name="__RequestVerificationToken"]'
+        ).value;
+
+        const titleDisplay = document.getElementById('titleDisplay');
+        const titleInput = document.getElementById('titleInput');
+        const contentDisplay = document.getElementById('contentDisplay');
+        const contentInput = document.getElementById('contentInput');
+        const saveStatus = document.getElementById('saveStatus');
+
+        function showStatus(message) {
+            saveStatus.textContent = message;
+        }
+
+        async function saveField(field, value) {
+            showStatus('Saving...');
+
+            const body = new URLSearchParams({
+                id: recordId,
+                field: field,
+                value: value,
+                __RequestVerificationToken: token
+            });
+
+            try {
+                const response = await fetch(saveUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: body.toString()
+                });
+
+                if (!response.ok) {
+                    const message = await response.text();
+                    throw new Error(message || 'Unable to save changes.');
+                }
+
+                showStatus('All changes saved.');
+                return true;
+            } catch (error) {
+                showStatus('Save failed. Please try again.');
+                return false;
+            }
+        }
+
+        // TITLE: click to edit
+        titleDisplay.addEventListener('click', () => {
+            titleInput.value = titleDisplay.textContent.trim();
+            titleDisplay.style.display = 'none';
+            titleInput.style.display = 'block';
+            titleInput.focus();
+            titleInput.select();
+        });
+
+        // TITLE: save when focus leaves the input
+        titleInput.addEventListener('blur', async () => {
+            const oldValue = titleDisplay.textContent.trim();
+            const newValue = titleInput.value.trim();
+
+            if (!newValue) {
+                titleInput.value = oldValue;
+                titleInput.style.display = 'none';
+                titleDisplay.style.display = 'block';
+                showStatus('Title cannot be empty.');
+                return;
+            }
+
+            if (newValue.length > 200) {
+                titleInput.focus();
+                showStatus('Title cannot exceed 200 characters.');
+                return;
+            }
+
+            if (newValue === oldValue) {
+                titleInput.style.display = 'none';
+                titleDisplay.style.display = 'block';
+                return;
+            }
+
+            const success = await saveField('Title', newValue);
+
+            if (success) {
+                titleDisplay.textContent = newValue;
+                document.title = newValue;
+                titleInput.style.display = 'none';
+                titleDisplay.style.display = 'block';
+            } else {
+                titleInput.focus();
+            }
+        });
+
+        // CONTENT: click to edit
+        contentDisplay.addEventListener('click', () => {
+            contentInput.value = contentDisplay.textContent;
+            contentDisplay.style.display = 'none';
+            contentInput.style.display = 'block';
+            contentInput.focus();
+        });
+
+        // CONTENT: save when focus leaves the textarea
+        contentInput.addEventListener('blur', async () => {
+            const oldValue = contentDisplay.textContent;
+            const newValue = contentInput.value;
+
+            if (newValue === oldValue) {
+                contentInput.style.display = 'none';
+                contentDisplay.style.display = 'block';
+                return;
+            }
+
+            const success = await saveField('Content', newValue);
+
+            if (success) {
+                contentDisplay.textContent = newValue;
+                contentInput.style.display = 'none';
+                contentDisplay.style.display = 'block';
+            } else {
+                contentInput.focus();
+            }
+        });
+    </script>
+}

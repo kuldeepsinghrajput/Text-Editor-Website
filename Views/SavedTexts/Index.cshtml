@@ -1,0 +1,52 @@
+@model IEnumerable<test_project.Models.SavedText>
+
+@{
+    ViewData["Title"] = "My Texts";
+}
+
+<div class="d-flex justify-content-between align-items-center">
+    <h1>My Texts</h1>
+    <a asp-action="Create" class="btn btn-primary">Create New Text</a>
+</div>
+@if (!(Model.Any()))
+{
+    <p>No saved texts found. Click "Create New Text" to add one.</p>
+}
+else
+{
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>
+                    @Html.DisplayNameFor(model => model.Content)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.CreatedAt)
+                </th>
+                <th>
+                   Action
+                </th>
+
+               
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>
+                        @Html.DisplayFor(model => item.Title)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(model => item.CreatedAt)
+                    </td>
+                    <td>
+                      <a asp-action="Details" asp-route-id="@item.Id">Open</a>
+                    </td>
+                 
+                </tr>
+            }
+        </tbody>
+    </table>
+}
