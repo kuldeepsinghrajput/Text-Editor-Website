@@ -47,8 +47,8 @@ Install the following software before running the application:
 Open a terminal and run:
 
 ```bash
-git clone <YOUR_GITHUB_REPOSITORY_URL>
-cd <YOUR_REPOSITORY_FOLDER>
+git clone https://github.com/kuldeepsinghrajput/Text-Editor-Website.git
+cd Text-Editor-Website
 ```
 
 Replace the placeholders with your repository URL and folder name.
